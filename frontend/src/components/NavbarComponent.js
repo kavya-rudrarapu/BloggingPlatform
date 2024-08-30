@@ -58,7 +58,7 @@ const NavbarComponent = ({ loggedIn, setSearchQuery }) => {
                 alt="Logo"
                 style={{ width: "40px", height: "40px", marginRight: "10px" }}
               />{" "}
-              Trivya
+              Blogify
             </Link>
             <button
               className="navbar-toggler"
@@ -132,7 +132,10 @@ const NavbarComponent = ({ loggedIn, setSearchQuery }) => {
                       style={{ fontSize: "2.5rem" }}
                     ></i>
                   </button>
-                  <ul className="dropdown-menu" aria-labelledby="profileDropdown">
+                  <ul
+                    className="dropdown-menu"
+                    aria-labelledby="profileDropdown"
+                  >
                     <li>
                       <button className="dropdown-item" onClick={handleMyPosts}>
                         My Posts
