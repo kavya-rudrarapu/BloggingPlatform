@@ -61,7 +61,7 @@ function LoginComponent({ setUserData, userData }) {
       <div className="body1">
         <div className="container justify-content-center align-items-center p-5">
           <h1 className="mb-5 text-center" style={{ fontSize: "4rem" }}>
-            <b>Trivya</b>
+            <b>Blogify</b>
           </h1>
           <div
             className="container justify-content-center align-items-center p-5"

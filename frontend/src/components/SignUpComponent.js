@@ -141,7 +141,7 @@ function SignupComponent({ setUserData }) {
       <div className="body1">
         <div className="main1">
           <h1 className="subhead1">
-            <b>Trivya</b>
+            <b>Blogify</b>
           </h1>
           <div
             className="submain1"
