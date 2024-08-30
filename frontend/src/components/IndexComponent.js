@@ -25,7 +25,7 @@ const IndexComponent = () => {
                 alt="Logo"
                 style={{ width: "60px", height: "60px", marginRight: "10px" }}
               />{" "}
-              Trivya
+              Blogify
             </Link>
           </div>
           <div className="col-sm-2 ">
