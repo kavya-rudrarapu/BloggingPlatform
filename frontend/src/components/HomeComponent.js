@@ -7,6 +7,7 @@ const HomeComponent = ({ searchQuery }) => {
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [authors, setAuthors] = useState({});
+  const [postImages, setPostImages] = useState({}); // New state for images
 
   const categoryImages = {
     travel: "https://e0.pxfuel.com/wallpapers/298/983/desktop-wallpaper-travel-around-world-travel-laptop-background-travel-and-tourism.jpg",
@@ -24,6 +25,32 @@ const HomeComponent = ({ searchQuery }) => {
     navigate(`/post/${id}`);
   };
 
+  const fetchPostImages = async (posts) => {
+    try {
+      const imagePromises = posts.map(async (post) => {
+        if (post.image) {
+          const imageResponse = await axios.get(`http://localhost:2000/api/posts/image`, {
+            params: { id: post.image },
+            responseType: 'blob'
+          });
+          const blob = new Blob([imageResponse.data], { type: imageResponse.data.type || 'image/jpeg' });
+          const urlImage = URL.createObjectURL(blob);
+          return { id: post._id, url: urlImage };
+        }
+        return { id: post._id, url: "" };
+      });
+
+      const images = await Promise.all(imagePromises);
+      const imageMap = images.reduce((acc, { id, url }) => {
+        acc[id] = url;
+        return acc;
+      }, {});
+      setPostImages(imageMap);
+    } catch (err) {
+      console.log('Error fetching images:', err);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const response = await axios.get("http://localhost:2000/api/posts");
@@ -39,6 +66,9 @@ const HomeComponent = ({ searchQuery }) => {
         return acc;
       }, {});
       setAuthors(authorsMap);
+
+      // Fetch post images
+      fetchPostImages(posts);
     } catch (err) {
       console.log(err);
     }
@@ -54,13 +84,8 @@ const HomeComponent = ({ searchQuery }) => {
       post.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getPostImage = (post) => {
-    if (post.image) {
-      return post.image;
-    } else if (categoryImages[post.category.toLowerCase()]) {
-      return categoryImages[post.category.toLowerCase()];
-    }
-    return "";
+  const getPostImage = (postId) => {
+    return postImages[postId] || categoryImages[filteredPosts.find(post => post._id === postId)?.category.toLowerCase()] || "";
   };
 
   const getAuthorAvatar = (authorId) => {
@@ -93,10 +118,9 @@ const HomeComponent = ({ searchQuery }) => {
             >
               <div
                 className="card-image"
-                style={{
-                  backgroundImage: `url(${getPostImage(post)})`,
-                }}
+                
               >
+                <img src={`${getPostImage(post._id)}`} alt="img" width={"100%"} height={"100%"}/>
                 <div className="card-category">{post.category}</div>
               </div>
               <div className="card-details">
@@ -124,5 +148,3 @@ const HomeComponent = ({ searchQuery }) => {
 };
 
 export default HomeComponent;
-
-

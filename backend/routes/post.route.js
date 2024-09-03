@@ -10,6 +10,7 @@ const verifyToken = authroutes.verifyToken;
 
 routes.post("/", verifyToken, methods.createPost);
 routes.get("/", methods.allPosts);
+routes.get("/image",methods.getImage)
 routes.get("/:id", methods.getPostById);
 routes.put("/:id", methods.updatePost);
 routes.get("/post/:userId", methods.getPostByUserId);

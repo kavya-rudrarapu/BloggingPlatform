@@ -4,6 +4,18 @@ import "font-awesome/css/font-awesome.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "../css/home.css"; // Reuse the CSS file
 
+const categoryImages = {
+  travel: "https://e0.pxfuel.com/wallpapers/298/983/desktop-wallpaper-travel-around-world-travel-laptop-background-travel-and-tourism.jpg",
+  food: "https://static.vecteezy.com/system/resources/thumbnails/021/939/720/small_2x/fast-food-set-hamburger-cheeseburger-cola-french-fries-burger-and-hamburger-ai-photo.jpg",
+  health: "https://etimg.etb2bimg.com/thumb/103580468.cms?width=400&height=300",
+  music: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEuhMn5PzmvIhYOtIO_pi73wgB_yH5L9IjOg&s",
+  fitness: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbfDAWy8FhkWk5-3",
+  motivation: "https://www.usatoday.com/gcdn/authoring/images/motleyfool/2023/11/05/U",
+  others: "https://i.pngimg.me/thumb/f/720/comdlpng6938797.jpg",
+  study: "https://images.pexels.com/photos/301920/pexels-photo-301920.jpeg?cs=sr",
+  cooking: "https://www.justwords.in/blog/wp-content/uploads/2020/10/indian-food-i"
+};
+
 export default function MyPostsComponent({ searchQuery, setUserData }) {
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState("");
@@ -11,6 +23,7 @@ export default function MyPostsComponent({ searchQuery, setUserData }) {
   const [content, setContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserDataState] = useState(null);
+  const [postImages, setPostImages] = useState({}); // State for images
 
   const navigate = useNavigate();
 
@@ -31,10 +44,34 @@ export default function MyPostsComponent({ searchQuery, setUserData }) {
         .then((response) => response.json())
         .then((data) => {
           setPosts(data.myposts);
+          fetchPostImages(data.myposts); // Fetch images for the posts
         })
         .catch((error) => console.error("Error fetching posts:", error));
     }
   }, [userData, isEditing]);
+
+  const fetchPostImages = async (posts) => {
+    try {
+      const imagePromises = posts.map(async (post) => {
+        if (post.image) {
+          const imageResponse = await fetch(`http://localhost:2000/api/posts/image?id=${post.image}`);
+          const blob = await imageResponse.blob();
+          const urlImage = URL.createObjectURL(blob);
+          return { id: post._id, url: urlImage };
+        }
+        return { id: post._id, url: categoryImages[post.category.toLowerCase()] || "https://example.com/default-image.jpg" }; // Default to category image
+      });
+
+      const images = await Promise.all(imagePromises);
+      const imageMap = images.reduce((acc, { id, url }) => {
+        acc[id] = url;
+        return acc;
+      }, {});
+      setPostImages(imageMap);
+    } catch (err) {
+      console.error('Error fetching images:', err);
+    }
+  };
 
   const handlePosts = (id) => {
     navigate(`/post/${id}`);
@@ -87,6 +124,10 @@ export default function MyPostsComponent({ searchQuery, setUserData }) {
     post.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getPostImage = (postId) => {
+    return postImages[postId] || "https://example.com/default-image.jpg"; // Default image URL
+  };
+
   return (
     <>
       <div className="content-section">
@@ -98,7 +139,7 @@ export default function MyPostsComponent({ searchQuery, setUserData }) {
                 <div
                   className="card-image"
                   style={{
-                    backgroundImage: `url(${post.image || "https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg"})`,
+                    backgroundImage: `url(${getPostImage(post._id)})`,
                   }}
                 >
                   <div className="card-category">{post.category}</div>

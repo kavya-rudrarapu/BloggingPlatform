@@ -2,6 +2,45 @@ const postModel = require("../models/post.model");
 const categoryModel = require("../models/category.model");
 const e = require("express");
 const mongoose = require("mongoose");
+const multer = require('multer');
+const path = require('path');
+const express = require('express');
+const fs = require('fs');
+const app = express();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = 'uploads/';
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'))); // Ensure correct path
+
+
+async function getImage(req, res) {
+  console.log('hello world');
+  const id = req.query.id;
+  console.log("qurery id : "+id);
+  // Construct the full path to the file
+  const filePath = path.join(__dirname, '..', id);
+
+  // Read the file asynchronously and send it as a response
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      // If there's an error (e.g., file not found), send a 404 response
+      return res.status(404).send('File not found');
+    }
+
+    // Send the file as a response
+    res.send(data);
+  });
+}
 
 async function updatePost(req, res) {
   try {
@@ -43,6 +82,8 @@ async function getPostById(req, res) {
 }
 async function createPost(req, res) {
   try {
+    const imagePath = req.file ? `/uploads/${req.file.filename}` : '';
+
     const posts = await postModel.create({
       userId: req.id,
       title: req.body.title,
@@ -50,6 +91,7 @@ async function createPost(req, res) {
       createdAt: req.body.createdAt,
       category: req.body.category,
       tags: req.body.tags,
+      image: imagePath
     });
     categ = posts.category;
     const categories = await categoryModel.findOne({ name: categ });
@@ -162,7 +204,7 @@ async function getPostByUserId(req, res) {
   }
 }
 methods = {
-  createPost,
+  createPost:[upload.single('image'), createPost],
   deletePost,
   updatePost,
   allPosts,
@@ -170,5 +212,6 @@ methods = {
   increaseLikes,
   decreaseLikes,
   getPostByUserId,
+  getImage
 };
 module.exports = methods;

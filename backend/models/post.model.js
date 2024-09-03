@@ -34,7 +34,10 @@ const postSchema = mongoose.Schema({
     },
     createdAt: {
         type: Date
-    }
+    },
+    image:{
+        type:String
+    } 
 });
 
 const postModel = mongoose.model('posts', postSchema);

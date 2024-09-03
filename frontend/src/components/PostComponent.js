@@ -10,6 +10,7 @@ const PostComponent = ({ userData }) => {
   const [author, setAuthor] = useState({});
   const [input, setInput] = useState("");
   const [liked, setLiked] = useState(false);
+  const [viewImage, setViewImage] = useState(null); // State for viewing image
   const params = useParams();
   const commentsRef = useRef(null);
 
@@ -35,7 +36,6 @@ const PostComponent = ({ userData }) => {
         config
       );
       setPost(response.data);
-      console.log(response.data.likedByUser);
 
       // Check localStorage to see if the user has liked this post
       const hasLiked = await localStorage.getItem(`${response.data._id}-${userData._id}`);
@@ -49,6 +49,20 @@ const PostComponent = ({ userData }) => {
       setComments(
         res.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       );
+
+      // Fetch image
+      if (response.data.image) {
+        const imageResponse = await axios.get(`http://localhost:2000/api/posts/image`, {
+          params: { id: response.data.image },
+          responseType: 'blob' // Ensure the response is treated as a Blob
+        });
+
+        if (imageResponse && imageResponse.data) {
+          const blob = new Blob([imageResponse.data], { type: imageResponse.data.type || 'image/jpeg' });
+          const urlImage = URL.createObjectURL(blob);
+          setViewImage(urlImage);
+        }
+      }
     } catch (err) {
       console.error("Error fetching blog data:", err);
     }
@@ -70,65 +84,30 @@ const PostComponent = ({ userData }) => {
     }
   };
 
-  // const handleLikeToggle = async () => {
-  //   const token = JSON.parse(localStorage.getItem("token"))?.token;
-  //   if (!token) {
-  //       alert("You need to be logged in to perform this action.");
-  //       return;
-  //   }
-
-  //   try {
-  //       const apiUrl = liked 
-  //           ? `http://localhost:2000/api/posts/unlike/${params.id}` 
-  //           : `http://localhost:2000/api/posts/like/${params.id}`;
-        
-  //       await axios.post(apiUrl, { username: userData.username }, config);
-        
-  //       setPost((prevPost) => ({
-  //           ...prevPost,
-  //           likes: liked ? prevPost.likes - 1 : prevPost.likes + 1,
-  //           likedBy: liked 
-  //               ? prevPost.likedBy.filter(user => user !== userData.username)
-  //               : [...prevPost.likedBy, userData.username]
-  //       }));
-        
-  //       setLiked(!liked);
-        
-  //       localStorage.setItem(`${post._id}-${userData._id}`, (liked));
-  //   } catch (err) {
-  //       console.error("Error toggling like:", err);
-  //   }
-  // };
   const handleLikeToggle = async () => {
-    
- 
     try {
-
-       setLiked(!liked)
-       const apiUrl = liked 
-          ? `http://localhost:2000/api/posts/unlike/${params.id}` 
-          : `http://localhost:2000/api/posts/like/${params.id}`;
-      
-       const response = await axios.post(apiUrl, { username: userData.username }, config);
-       
-       setPost((prevPost) => ({
-          ...prevPost,
-          likes: liked ? prevPost.likes - 1 : prevPost.likes + 1,
-          likedBy: liked 
-              ? prevPost.likedBy.filter(user => user !== userData.username)
-              : [...prevPost.likedBy, userData.username]
-       }));
-       
-       setLiked(!liked);
-       
-       // Store the liked state in localStorage
-       localStorage.setItem(`${post._id}-${userData._id}`, (!liked).toString());
+      setLiked(!liked);
+      const apiUrl = liked 
+        ? `http://localhost:2000/api/posts/unlike/${params.id}` 
+        : `http://localhost:2000/api/posts/like/${params.id}`;
+    
+      const response = await axios.post(apiUrl, { username: userData.username }, config);
+    
+      setPost((prevPost) => ({
+        ...prevPost,
+        likes: liked ? prevPost.likes - 1 : prevPost.likes + 1,
+        likedBy: liked 
+          ? prevPost.likedBy.filter(user => user !== userData.username)
+          : [...prevPost.likedBy, userData.username]
+      }));
+    
+      // Store the liked state in localStorage
+      localStorage.setItem(`${post._id}-${userData._id}`, (!liked).toString());
     } catch (err) {
-       console.error("Error toggling like:", err);
-
+      console.error("Error toggling like:", err);
     }
- };
- 
+  };
+
   const handleComment = async () => {
     try {
       await axios.post(
@@ -149,11 +128,10 @@ const PostComponent = ({ userData }) => {
 
   const handleDelete = async (id) => {
     try {
-      const res = await axios.delete(
+      await axios.delete(
         `http://localhost:2000/api/posts/comments/${params.id}/${id}`,
         config
       );
-      console.log(res.data);
       setComments(comments.filter((comm) => comm._id !== id));
     } catch (err) {
       console.error("Error deleting comment:", err);
@@ -197,9 +175,9 @@ const PostComponent = ({ userData }) => {
       </div>
       <figure className="figure text-center">
         <img
-          src={post.image || "https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg"}
+          src={viewImage || post.image || "https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg"}
           className="figure-img img-fluid rounded"
-          alt="..."
+          alt="Post"
           style={{ width: "100%", height: "auto", aspectRatio: "16/9" }}
         />
         <figcaption className="figure-caption mt-4" style={{ fontSize: "20px" }}>
@@ -217,7 +195,7 @@ const PostComponent = ({ userData }) => {
           className="comm"
           onChange={(e) => setInput(e.target.value)}
           style={{
-            border: "1px solid  rgba(0, 0, 0, 0.1)",
+            border: "1px solid rgba(0, 0, 0, 0.1)",
             width: "75%",
           }}
         ></textarea>
@@ -249,7 +227,7 @@ const PostComponent = ({ userData }) => {
               <img
                 src="https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg"
                 className="img img-fluid"
-                alt="..."
+                alt="User"
                 style={{ borderRadius: "50%", width: "30px" }}
               />
               <p className="ml-2 mb-0" style={{ fontSize: "13px" }}>

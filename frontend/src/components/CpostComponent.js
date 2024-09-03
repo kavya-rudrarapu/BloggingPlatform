@@ -9,20 +9,32 @@ const CpostComponent = ({ category }) => {
     const [data, setData] = useState([]);
     const [authors, setAuthors] = useState({});
     const [like, setLike] = useState({});
+    const [postImages, setPostImages] = useState({});
+
+    const categoryImages = {
+        travel: "https://e0.pxfuel.com/wallpapers/298/983/desktop-wallpaper-travel-around-world-travel-laptop-background-travel-and-tourism.jpg",
+        food: "https://static.vecteezy.com/system/resources/thumbnails/021/939/720/small_2x/fast-food-set-hamburger-cheeseburger-cola-french-fries-burger-and-hamburger-ai-photo.jpg",
+        health: "https://etimg.etb2bimg.com/thumb/103580468.cms?width=400&height=300",
+        music: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEuhMn5PzmvIhYOtIO_pi73wgB_yH5L9IjOg&s",
+        fitness: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbfDAWy8FhkWk5-3",
+        motivation: "https://www.usatoday.com/gcdn/authoring/images/motleyfool/2023/11/05/U",
+        others: "https://i.pngimg.me/thumb/f/720/comdlpng6938797.jpg",
+        study: "https://images.pexels.com/photos/301920/pexels-photo-301920.jpeg?cs=sr",
+        cooking: "https://www.justwords.in/blog/wp-content/uploads/2020/10/indian-food-i"
+    };
 
     const handlePosts = (id) => {
         navigate(`/post/${id}`);
     };
-    
+
     useEffect(() => {
+        console.log('Category:', category);
         const storedPosts = localStorage.getItem(`posts-${category}`);
-        console.log("Stored Posts from Local Storage:", storedPosts);
         if (storedPosts) {
             try {
                 const posts = JSON.parse(storedPosts);
                 setData(posts);
-    
-                // Retrieve authors
+
                 const userIds = posts.map(post => post.userId);
                 Promise.all(userIds.map(id => axios.get(`http://localhost:2000/api/users/${id}`)))
                     .then(userResponses => {
@@ -33,29 +45,28 @@ const CpostComponent = ({ category }) => {
                         setAuthors(authorsMap);
                     })
                     .catch(err => console.log('Error fetching users:', err));
-    
-                // Initialize like states
+
                 const likeStates = posts.reduce((acc, post) => {
                     acc[post._id] = post.likedByUser;
                     return acc;
                 }, {});
                 setLike(likeStates);
+
+                fetchPostImages(posts);
             } catch (err) {
                 console.log('Error parsing local storage data:', err);
-                fetchData(); // Fallback to API if local storage is corrupt or empty
+                fetchData();
             }
         } else {
-            fetchData(); // Fetch from API if no data in local storage
+            fetchData();
         }
     }, [category]);
 
-    
     const fetchData = async () => {
         try {
             const response = await axios.get(`http://localhost:2000/api/categories/${category}`);
             const posts = response.data;
 
-            // Store posts in local storage
             localStorage.setItem(`posts-${category}`, JSON.stringify(posts));
             setData(posts);
 
@@ -72,45 +83,46 @@ const CpostComponent = ({ category }) => {
                 return acc;
             }, {});
             setLike(likeStates);
+
+            fetchPostImages(posts);
         } catch (err) {
             console.log('Error fetching data:', err);
         }
     };
 
-    useEffect(() => {
-        // Try to get posts from local storage
-        const storedPosts = localStorage.getItem(`posts-${category}`);
-        if (storedPosts) {
-            try {
-                const posts = JSON.parse(storedPosts);
-                setData(posts);
+    const fetchPostImages = async (posts) => {
+        try {
+            const imagePromises = posts.map(async (post) => {
+                if (post.image) {
+                    const imageResponse = await axios.get(`http://localhost:2000/api/posts/image`, {
+                        params: { id: post.image },
+                        responseType: 'blob'
+                    });
+                    const blob = new Blob([imageResponse.data], { type: imageResponse.data.type || 'image/jpeg' });
+                    const urlImage = URL.createObjectURL(blob);
+                    return { id: post._id, url: urlImage };
+                }
+                return { id: post._id, url: "" };
+            });
 
-                // Retrieve authors
-                const userIds = posts.map(post => post.userId);
-                Promise.all(userIds.map(id => axios.get(`http://localhost:2000/api/users/${id}`)))
-                    .then(userResponses => {
-                        const authorsMap = userResponses.reduce((acc, { data }, index) => {
-                            acc[userIds[index]] = data;
-                            return acc;
-                        }, {});
-                        setAuthors(authorsMap);
-                    })
-                    .catch(err => console.log('Error fetching users:', err));
-
-                // Initialize like states
-                const likeStates = posts.reduce((acc, post) => {
-                    acc[post._id] = post.likedByUser;
-                    return acc;
-                }, {});
-                setLike(likeStates);
-            } catch (err) {
-                console.log('Error parsing local storage data:', err);
-                fetchData(); // Fallback to API if local storage is corrupt or empty
-            }
-        } else {
-            fetchData(); // Fetch from API if no data in local storage
+            const images = await Promise.all(imagePromises);
+            const imageMap = images.reduce((acc, { id, url }) => {
+                acc[id] = url;
+                return acc;
+            }, {});
+            setPostImages(imageMap);
+        } catch (err) {
+            console.log('Error fetching images:', err);
         }
-    }, [category]);
+    };
+
+    const getPostImage = (postId) => {
+        const postImage = postImages[postId];
+        if (postImage) return postImage;
+
+        const postCategory = data.find(post => post._id === postId)?.category.toLowerCase();
+        return categoryImages[postCategory] || "";
+    };
 
     const handleLike = async (id) => {
         try {
@@ -122,7 +134,6 @@ const CpostComponent = ({ category }) => {
                 setLike(prevLike => ({ ...prevLike, [id]: true }));
             }
 
-            // Update local storage
             const updatedPosts = data.map(post => post._id === id
                 ? { ...post, likedByUser: !like[id], likes: post.likes + (like[id] ? -1 : 1) }
                 : post
@@ -134,19 +145,12 @@ const CpostComponent = ({ category }) => {
         }
     };
 
-    const getPostImage = (post) => {
-        if (post.image) {
-            return post.image;
-        }
-        return "";
-    };
-
     const getAuthorAvatar = (authorId) => {
         const author = authors[authorId];
         if (author && author.avatar) {
             return author.avatar;
         }
-        return "https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg"; // Fallback avatar
+        return "https://pbs.twimg.com/media/GBMkWGbbUAA6zvs.jpg";
     };
 
     return (
@@ -166,10 +170,17 @@ const CpostComponent = ({ category }) => {
                                 <div
                                     className="card-image"
                                     style={{
-                                        backgroundImage: `url(${getPostImage(post)})`,
+                                        backgroundImage: `url(${getPostImage(post._id)})`,
                                     }}
                                 >
-                                    {/* <div className="card-category">{post.category}</div> */}
+                                    {!post.image && (
+                                        <img
+                                            src={getPostImage(post._id)}
+                                            alt="Post"
+                                            width={"100%"}
+                                            height={"100%"}
+                                        />
+                                    )}
                                 </div>
                                 <div className="card-details">
                                     <div className="card-title">{post.title}</div>
